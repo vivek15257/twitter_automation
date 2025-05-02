@@ -1,52 +1,65 @@
 # twitter_automation
 
-Automate posting tweets using AI-generated content with Groq and the Twitter API.
+Automate posting tweets using AI-generated content with Groq and the Twitter API. This project is designed to run on Vercel with daily automated tweets.
 
 ## Features
-- Generates unique web development tweets using Groq LLMs
+- Generates unique tech tweets using Groq LLMs
 - Posts tweets automatically to your Twitter account
-- Streams AI output in real-time to the console
+- Includes relevant images with tweets
+- Runs daily at 9:00 AM UTC
+- Deployed on Vercel (no need to keep your computer running)
 
 ## Prerequisites
-- Node.js (v18 or higher recommended)
 - A Twitter Developer account ([apply here](https://developer.twitter.com/en/portal/dashboard))
 - A Groq account ([get API key here](https://console.groq.com/keys))
+- A News API key ([get here](https://newsapi.org/))
+- A Vercel account ([sign up here](https://vercel.com))
 
 ## Setup
-1. **Clone this repository**
-   ```sh
-   git clone <your-repo-url>
-   cd twitter_automation
+
+### 1. Fork this repository
+Click the "Fork" button at the top of this repository to create your own copy.
+
+### 2. Set up environment variables in Vercel
+1. Go to your Vercel dashboard
+2. Create a new project and import your forked repository
+3. Add the following environment variables:
+   ```
+   TWITTER_APP_KEY=your_twitter_app_key
+   TWITTER_APP_SECRET=your_twitter_app_secret
+   TWITTER_ACCESS_TOKEN=your_twitter_access_token
+   TWITTER_ACCESS_SECRET=your_twitter_access_secret
+   GROQ_API_KEY=your_groq_api_key
+   NEWS_API_KEY=your_news_api_key
    ```
 
-2. **Install dependencies**
-   ```sh
-   npm install
-   ```
+### 3. Deploy to Vercel
+1. Connect your GitHub repository to Vercel
+2. Vercel will automatically deploy your project
+3. The cron job will run daily at 9:00 AM UTC
 
-3. **Configure your API keys**
-   - Open `SECRETS.js` and replace the placeholder values with your actual credentials:
-     ```js
-     const APP_KEY = "YOUR_TWITTER_API_KEY";
-     const APP_SECRET = "YOUR_TWITTER_API_SECRET";
-     const ACCESS_TOKEN = "YOUR_TWITTER_ACCESS_TOKEN";
-     const ACCESS_SECRET = "YOUR_TWITTER_ACCESS_TOKEN_SECRET";
-     const GROQ_API_KEY = "YOUR_GROQ_API_KEY";
-     ```
-   - You can find these in your Twitter Developer Portal under **Keys and Tokens**.
+## How it Works
+1. The Vercel cron job triggers the API endpoint daily
+2. The script fetches the latest tech news
+3. Uses Groq to generate an engaging tweet
+4. Posts the tweet with a relevant image
+5. Logs the result in Vercel's function logs
 
-4. **Run the project**
-   ```sh
-   npm start
-   ```
-   The script will generate a tweet using Groq and post it to your Twitter account.
+## Monitoring
+- Check Vercel's deployment logs to monitor tweet posting
+- View your Twitter account to see the posted tweets
+- The function returns a success/error response that you can monitor
 
 ## Troubleshooting
-- **Groq 503 Service Unavailable**: This means the Groq API is temporarily down. Wait a few minutes and try again. Check [Groq's status page](https://status.groq.com/) for updates.
-- **Twitter authentication errors**: Double-check your API keys and tokens in `SECRETS.js`.
+- **Twitter API Errors**: Check your Twitter API credentials and permissions
+- **Groq API Errors**: Verify your Groq API key
+- **News API Errors**: Check your News API key and quota
+- **Vercel Deployment Issues**: Check the Vercel deployment logs
 
 ## Security Note
-Do **not** share your `SECRETS.js` file or commit it to public repositories. Keep your API keys safe!
+- Never commit your `.env` file or expose your API keys
+- Use Vercel's environment variables for secure key storage
+- Regularly rotate your API keys for better security
 
 ---
 

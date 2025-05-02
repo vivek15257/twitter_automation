@@ -1,0 +1,148 @@
+const { Groq } = require('groq-sdk');
+const { TwitterApi } = require("twitter-api-v2");
+const NewsAPI = require('newsapi');
+const axios = require('axios');
+
+// Initialize clients with environment variables
+const twitterClient = new TwitterApi({
+  appKey: process.env.TWITTER_APP_KEY,
+  appSecret: process.env.TWITTER_APP_SECRET,
+  accessToken: process.env.TWITTER_ACCESS_TOKEN,
+  accessSecret: process.env.TWITTER_ACCESS_SECRET,
+});
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+const newsapi = new NewsAPI(process.env.NEWS_API_KEY);
+
+// Default tech images
+const DEFAULT_IMAGES = [
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=630&fit=crop',
+  'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=630&fit=crop',
+  'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&h=630&fit=crop',
+  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&h=630&fit=crop',
+  'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=630&fit=crop'
+];
+
+async function downloadImage(url) {
+  try {
+    const response = await axios({
+      url,
+      responseType: 'arraybuffer'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error downloading image:', error);
+    return null;
+  }
+}
+
+async function getLatestTechNews() {
+  try {
+    const response = await newsapi.v2.topHeadlines({
+      category: 'technology',
+      language: 'en',
+      pageSize: 5
+    });
+    return response.articles;
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    return [];
+  }
+}
+
+async function verifyTwitterCredentials() {
+  try {
+    const me = await twitterClient.v2.me();
+    console.log(`Connected to Twitter as: @${me.data.username}`);
+    return true;
+  } catch (error) {
+    console.error('Twitter API Error:', error.message);
+    return false;
+  }
+}
+
+async function generateAndTweet(prompt, imageBuffer) {
+  let fullText = '';
+  const chatCompletion = await groq.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    model: "llama-3.3-70b-versatile",
+    temperature: 0.7,
+    max_completion_tokens: 400,
+    stream: true
+  });
+
+  for await (const chunk of chatCompletion) {
+    const content = chunk.choices[0]?.delta?.content || '';
+    fullText += content;
+  }
+
+  await sendTweet(fullText.trim(), imageBuffer);
+}
+
+async function sendTweet(tweetText, imageBuffer) {
+  try {
+    if (tweetText.length > 280) {
+      console.log('Tweet is too long, truncating to 280 characters...');
+      tweetText = tweetText.substring(0, 277) + '...';
+    }
+
+    if (imageBuffer) {
+      const mediaId = await twitterClient.v1.uploadMedia(imageBuffer, { mimeType: 'image/jpeg' });
+      await twitterClient.v2.tweet({
+        text: tweetText,
+        media: { media_ids: [mediaId] }
+      });
+    } else {
+      await twitterClient.v2.tweet(tweetText);
+    }
+    console.log("Tweet sent successfully!");
+  } catch (error) {
+    console.error("Error sending tweet:", error);
+    throw error;
+  }
+}
+
+module.exports = async (req, res) => {
+  try {
+    // Verify Twitter credentials
+    const isTwitterValid = await verifyTwitterCredentials();
+    if (!isTwitterValid) {
+      throw new Error('Invalid Twitter credentials');
+    }
+
+    // Get latest tech news
+    const newsArticles = await getLatestTechNews();
+    
+    if (newsArticles.length === 0) {
+      const defaultPrompt = `Create a tweet about software development, tips and tricks, or something new in tech. Keep it under 280 characters, use emojis if appropriate, and make it engaging.`;
+      const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
+      const imageBuffer = await downloadImage(defaultImageUrl);
+      await generateAndTweet(defaultPrompt, imageBuffer);
+    } else {
+      const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)];
+      const prompt = `Create a tweet about this software developer like a coding language news: "${randomArticle.title}". 
+        Include a brief summary or interesting point from the article. 
+        Keep it under 280 characters, use emojis if appropriate, and make it engaging. 
+        Don't include the source or date.`;
+
+      let imageBuffer = null;
+      if (randomArticle.urlToImage) {
+        imageBuffer = await downloadImage(randomArticle.urlToImage);
+      }
+      if (!imageBuffer) {
+        const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
+        imageBuffer = await downloadImage(defaultImageUrl);
+      }
+
+      await generateAndTweet(prompt, imageBuffer);
+    }
+
+    res.status(200).json({ success: true, message: 'Tweet posted successfully' });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}; 
