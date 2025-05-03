@@ -107,9 +107,13 @@ async function run() {
   const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)];
   
   // Create a prompt based on the news article
-  const prompt = `Day ${dayCount} of 100: Create a tweet about this software developer like a coding language news: "${randomArticle.title}". 
-    Include a brief summary or interesting point from the article. 
-    Keep it under 280 characters, use emojis if appropriate, and make it engaging. 
+  const prompt = `Day ${dayCount} of 100: Create an engaging tweet about this coding language: "${randomArticle.title}". 
+    Include:
+    1. A brief, interesting summary or key takeaway
+    2. A thought-provoking question or call-to-action
+    3. 8-10 relevant hashtags (like #TechNews #Coding #Programming #AI #WebDev)
+    4. Appropriate emojis
+    5. Keep it under 280 characters
     Don't include the source or date.`;
 
   // Get image from article or use default

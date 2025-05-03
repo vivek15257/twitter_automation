@@ -1,8 +1,8 @@
 {
-  "name": "automate-twitter-posts-with-ai",
+  "name": "twitter-automation",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Automated tech tweets using Groq and Twitter API",
+  "main": "api/tweet.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
@@ -10,11 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/generative-ai": "^0.3.1",
-    "axios": "^1.9.0",
-    "groq-sdk": "^0.20.1",
-    "newsapi": "^2.4.1",
-    "node-cron": "^3.0.3",
-    "twitter-api-v2": "^1.16.1"
+    "groq-sdk": "latest",
+    "twitter-api-v2": "latest",
+    "newsapi": "latest",
+    "axios": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
