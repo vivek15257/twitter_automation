@@ -107,13 +107,20 @@ async function run() {
   const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)];
   
   // Create a prompt based on the news article
-  const prompt = `Day ${dayCount} of 100: Create an engaging tweet about this coding language: "${randomArticle.title}". 
-    Include:
-    1. A brief, interesting summary or key takeaway
-    2. A thought-provoking question or call-to-action
-    3. 8-10 relevant hashtags (like #TechNews #Coding #Programming #AI #WebDev)
-    4. Appropriate emojis
+  const prompt = `Day ${dayCount} of 100: Create a professional technical tweet about programming languages and development, inspired by: "${randomArticle.title}".
+
+    Requirements:
+    1. Focus on technical depth and professional insights about programming languages (Python, JavaScript, Java, C++, C#, etc.)
+    2. Include specific technical details, best practices, or advanced concepts
+    3. Add relevant technical hashtags:
+       - Language-specific: #Python #JavaScript #Java #Cpp #CSharp
+       - Technical: #SoftwareEngineering #WebDev #BackendDev #FrontendDev
+       - Advanced: #SystemDesign #Architecture #CleanCode #DevOps
+    4. Use professional emojis (💻 🛠️ ⚡ 🔧)
     5. Keep it under 280 characters
+    6. Make it sound like an expert developer sharing knowledge
+    7. Include a technical tip or best practice if relevant
+
     Don't include the source or date.`;
 
   // Get image from article or use default
@@ -170,9 +177,18 @@ async function sendTweet(tweetText, imageBuffer) {
       await twitterClient.v2.tweet(tweetText);
     }
     console.log("Tweet sent successfully!");
+    
+    // Add delay between tweets (5 minutes)
+    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
   } catch (error) {
     console.error("Error sending tweet:", error);
-    if (error.code === 403) {
+    if (error.code === 429) {
+      console.error('Rate limit exceeded. Waiting for 15 minutes before retrying...');
+      // Wait for 15 minutes before retrying
+      await new Promise(resolve => setTimeout(resolve, 15 * 60 * 1000));
+      // Retry the tweet
+      return sendTweet(tweetText, imageBuffer);
+    } else if (error.code === 403) {
       console.error('Please check your Twitter API credentials and ensure they have write permissions.');
     }
   }
@@ -185,8 +201,8 @@ console.log('Tweets will be posted daily at 9:00 AM');
 // Run immediately on startup
 run();
 
-// Schedule daily runs
-cron.schedule('0 9 * * *', () => {
+// Schedule runs with longer interval
+cron.schedule('0 */6 * * *', () => {  // Run every 6 hours instead of 4
   if (dayCount < TOTAL_DAYS) {
     run();
   } else {
