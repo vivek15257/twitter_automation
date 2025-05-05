@@ -17,13 +17,5 @@
       "path": "/",
       "schedule": "0 9 * * *"
     }
-  ],
-  "env": {
-    "TWITTER_APP_KEY": "@twitter_app_key",
-    "TWITTER_APP_SECRET": "@twitter_app_secret",
-    "TWITTER_ACCESS_TOKEN": "@twitter_access_token",
-    "TWITTER_ACCESS_SECRET": "@twitter_access_secret",
-    "GROQ_API_KEY": "@groq_api_key",
-    "NEWS_API_KEY": "@news_api_key"
-  }
+  ]
 } 
