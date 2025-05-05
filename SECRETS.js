@@ -4,20 +4,12 @@
 // TODO: Replace these placeholder values with your actual API keys
 // Get Twitter API keys from: https://developer.twitter.com/en/portal/dashboard
 // Get Groq API key from: https://console.groq.com/keys
-const APP_KEY = "fpE29u6Upl1ASyDYbRRvEzvJD";
-const APP_SECRET = "RNmUrUzXTgi0aQYBpA3VHZH7eUus85Q1sYTnGs6Lz1PdOdxEbg";
-const ACCESS_TOKEN = "1917971995448471552-INVf9CRhSLNVvCh2oM5rA4KN5C0kC3";
-const ACCESS_SECRET = "L1NevldS0zk1R7h89i1Osr4hw64rUXuFhg6ISmSQ4vERq";
-const GROQ_API_KEY = "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";
-const NEWS_API_KEY = "dd8f5a4bdd0d4cb0b7bd13525b60a4c7";
 
-const SECRETS = {
-  APP_KEY,
-  APP_SECRET,
-  ACCESS_TOKEN,
-  ACCESS_SECRET,
-  GROQ_API_KEY,
-  NEWS_API_KEY,
+module.exports = {
+  APP_KEY: process.env.APP_KEY,
+  APP_SECRET: process.env.APP_SECRET,
+  ACCESS_TOKEN: process.env.ACCESS_TOKEN,
+  ACCESS_SECRET: process.env.ACCESS_SECRET,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  NEWS_API_KEY: process.env.NEWS_API_KEY
 };
-
-module.exports = SECRETS;
