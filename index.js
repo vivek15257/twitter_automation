@@ -123,6 +123,28 @@ async function runBot() {
     const me = await twitterClient.v2.me();
     console.log(`Connected to Twitter as: @${me.data.username}`);
 
+    // Check 24-hour user limits
+    const rateLimits = await twitterClient.v2.rateLimitStatus();
+    const userLimits = rateLimits.data?.resources?.users?.['/2/users/:id'] || {};
+    const dailyLimit = parseInt(rateLimits.headers?.['x-user-limit-24hour-limit']) || 25;
+    const dailyRemaining = parseInt(rateLimits.headers?.['x-user-limit-24hour-remaining']) || 0;
+    const dailyReset = parseInt(rateLimits.headers?.['x-user-limit-24hour-reset']) || 0;
+
+    console.log(`Daily tweet limit: ${dailyLimit}`);
+    console.log(`Daily tweets remaining: ${dailyRemaining}`);
+    console.log(`Daily limit resets at: ${new Date(dailyReset * 1000).toLocaleString()}`);
+
+    if (dailyRemaining === 0) {
+      const resetTime = new Date(dailyReset * 1000);
+      console.log(`Daily tweet limit reached. Next reset at: ${resetTime}`);
+      return {
+        success: false,
+        error: 'Daily tweet limit reached',
+        resetTime: resetTime.toISOString(),
+        message: `Please wait until ${resetTime.toLocaleString()} before tweeting again.`
+      };
+    }
+
     // Get latest tech news
     const newsArticles = await getLatestTechNews();
     const dayCount = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 100 + 1;
