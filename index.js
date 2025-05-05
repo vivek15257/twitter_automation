@@ -1,46 +1,26 @@
-// By VishwaGauravIn (https://itsvg.in)
-
+require('dotenv').config();
 const { Groq } = require('groq-sdk');
 const { TwitterApi } = require("twitter-api-v2");
 const NewsAPI = require('newsapi');
-const cron = require('node-cron');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const SECRETS = require("./SECRETS");
+
+console.log('Starting Twitter Automation Bot...');
+console.log('Loading environment variables...');
 
 const twitterClient = new TwitterApi({
-  appKey: SECRETS.APP_KEY,
-  appSecret: SECRETS.APP_SECRET,
-  accessToken: SECRETS.ACCESS_TOKEN,
-  accessSecret: SECRETS.ACCESS_SECRET,
+  appKey: process.env.TWITTER_APP_KEY,
+  appSecret: process.env.TWITTER_APP_SECRET,
+  accessToken: process.env.TWITTER_ACCESS_TOKEN,
+  accessSecret: process.env.TWITTER_ACCESS_SECRET,
 });
-
-// Verify Twitter credentials
-async function verifyTwitterCredentials() {
-  try {
-    const me = await twitterClient.v2.me();
-    console.log(`Connected to Twitter as: @${me.data.username}`);
-    return true;
-  } catch (error) {
-    console.error('Twitter API Error:', error.message);
-    if (error.code === 403) {
-      console.error('Please check your Twitter API credentials and ensure they have write permissions.');
-      console.error('You can check your app permissions at: https://developer.twitter.com/en/portal/dashboard');
-    }
-    return false;
-  }
-}
 
 const groq = new Groq({
-  apiKey: SECRETS.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const newsapi = new NewsAPI(SECRETS.NEWS_API_KEY);
+const newsapi = new NewsAPI(process.env.NEWS_API_KEY);
 
-// Track the number of days
-let dayCount = 0;
-const TOTAL_DAYS = 100;
+console.log('API clients initialized successfully');
 
 // Default tech images to use if article has no image
 const DEFAULT_IMAGES = [
@@ -53,10 +33,12 @@ const DEFAULT_IMAGES = [
 
 async function downloadImage(url) {
   try {
+    console.log(`Downloading image from: ${url}`);
     const response = await axios({
       url,
       responseType: 'arraybuffer'
     });
+    console.log('Image downloaded successfully');
     return response.data;
   } catch (error) {
     console.error('Error downloading image:', error);
@@ -66,12 +48,13 @@ async function downloadImage(url) {
 
 async function getLatestTechNews() {
   try {
+    console.log('Fetching latest tech news...');
     const response = await newsapi.v2.topHeadlines({
       category: 'technology',
       language: 'en',
       pageSize: 5
     });
-    
+    console.log(`Found ${response.articles.length} tech news articles`);
     return response.articles;
   } catch (error) {
     console.error('Error fetching news:', error);
@@ -79,64 +62,8 @@ async function getLatestTechNews() {
   }
 }
 
-async function run() {
-  // Verify Twitter credentials first
-  const isTwitterValid = await verifyTwitterCredentials();
-  if (!isTwitterValid) {
-    console.error('Exiting due to Twitter API issues. Please fix your credentials.');
-    process.exit(1);
-  }
-
-  dayCount++;
-  console.log(`\n=== Day ${dayCount} of ${TOTAL_DAYS} ===`);
-  
-  // Get latest tech news
-  const newsArticles = await getLatestTechNews();
-  
-  if (newsArticles.length === 0) {
-    console.log('No news articles found. Using default prompt.');
-    const defaultPrompt = `Day ${dayCount} of 100: Generate a tweet about software development, tips and tricks, or something new in tech. Keep it under 280 characters, use emojis if appropriate, and make it engaging.`;
-    // Use a random default image
-    const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
-    const imageBuffer = await downloadImage(defaultImageUrl);
-    await generateAndTweet(defaultPrompt, imageBuffer);
-    return;
-  }
-
-  // Select a random article
-  const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)];
-  
-  // Create a prompt based on the news article
-  const prompt = `Day ${dayCount} of 100: Create a professional technical tweet about programming languages and development, inspired by: "${randomArticle.title}".
-
-    Requirements:
-    1. Focus on technical depth and professional insights about programming languages (Python, JavaScript, Java, C++, C#, etc.)
-    2. Include specific technical details, best practices, or advanced concepts
-    3. Add relevant technical hashtags:
-       - Language-specific: #Python #JavaScript #Java #Cpp #CSharp
-       - Technical: #SoftwareEngineering #WebDev #BackendDev #FrontendDev
-       - Advanced: #SystemDesign #Architecture #CleanCode #DevOps
-    4. Use professional emojis (💻 🛠️ ⚡ 🔧)
-    5. Keep it under 280 characters
-    6. Make it sound like an expert developer sharing knowledge
-    7. Include a technical tip or best practice if relevant
-
-    Don't include the source or date.`;
-
-  // Get image from article or use default
-  let imageBuffer = null;
-  if (randomArticle.urlToImage) {
-    imageBuffer = await downloadImage(randomArticle.urlToImage);
-  }
-  if (!imageBuffer) {
-    const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
-    imageBuffer = await downloadImage(defaultImageUrl);
-  }
-
-  await generateAndTweet(prompt, imageBuffer);
-}
-
 async function generateAndTweet(prompt, imageBuffer) {
+  console.log('Generating tweet content...');
   let fullText = '';
   const chatCompletion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
@@ -149,64 +76,117 @@ async function generateAndTweet(prompt, imageBuffer) {
   for await (const chunk of chatCompletion) {
     const content = chunk.choices[0]?.delta?.content || '';
     fullText += content;
-    process.stdout.write(content);
   }
 
-  console.log('\n');
-  await sendTweet(fullText.trim(), imageBuffer);
+  console.log('Tweet content generated successfully');
+  return await sendTweet(fullText.trim(), imageBuffer);
 }
 
 async function sendTweet(tweetText, imageBuffer) {
   try {
-    // Ensure tweet is within Twitter's character limit
+    console.log('Preparing to send tweet...');
     if (tweetText.length > 280) {
-      console.log('Tweet is too long, truncating to 280 characters...');
+      console.log('Tweet is too long, truncating...');
       tweetText = tweetText.substring(0, 277) + '...';
     }
 
     if (imageBuffer) {
-      // Upload the image first
+      console.log('Uploading image...');
       const mediaId = await twitterClient.v1.uploadMedia(imageBuffer, { mimeType: 'image/jpeg' });
-      // Then tweet with the image
+      console.log('Image uploaded, sending tweet with image...');
       await twitterClient.v2.tweet({
         text: tweetText,
         media: { media_ids: [mediaId] }
       });
     } else {
-      // Tweet without image if image upload failed
+      console.log('Sending tweet without image...');
       await twitterClient.v2.tweet(tweetText);
     }
-    console.log("Tweet sent successfully!");
-    
-    // Add delay between tweets (5 minutes)
-    await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+    console.log('Tweet sent successfully!');
+    return { success: true, message: "Tweet sent successfully!" };
   } catch (error) {
     console.error("Error sending tweet:", error);
-    if (error.code === 429) {
-      console.error('Rate limit exceeded. Waiting for 15 minutes before retrying...');
-      // Wait for 15 minutes before retrying
-      await new Promise(resolve => setTimeout(resolve, 15 * 60 * 1000));
-      // Retry the tweet
-      return sendTweet(tweetText, imageBuffer);
-    } else if (error.code === 403) {
-      console.error('Please check your Twitter API credentials and ensure they have write permissions.');
-    }
+    return { 
+      success: false, 
+      error: error.message,
+      code: error.code 
+    };
   }
 }
 
-// Schedule the script to run once per day at 9:00 AM
-console.log('Starting 100 Days of Tech Tweets...');
-console.log('Tweets will be posted daily at 9:00 AM');
+// Main function to run the bot
+async function runBot() {
+  try {
+    console.log('\n=== Starting New Tweet Cycle ===');
+    
+    // Verify Twitter credentials first
+    const me = await twitterClient.v2.me();
+    console.log(`Connected to Twitter as: @${me.data.username}`);
 
-// Run immediately on startup
-run();
+    // Get latest tech news
+    const newsArticles = await getLatestTechNews();
+    const dayCount = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 100 + 1;
+    console.log(`Current day count: ${dayCount}`);
+    
+    let prompt, imageBuffer;
+    
+    if (newsArticles.length === 0) {
+      console.log('No news articles found, using default prompt');
+      prompt = `Day ${dayCount} of 100: Generate a tweet about software development, tips and tricks, or something new in tech. Keep it under 280 characters, use emojis if appropriate, and make it engaging.`;
+      const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
+      imageBuffer = await downloadImage(defaultImageUrl);
+    } else {
+      const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)];
+      console.log(`Selected article: ${randomArticle.title}`);
+      prompt = `Day ${dayCount} of 100: Create a professional technical tweet about programming languages and development, inspired by: "${randomArticle.title}".
 
-// Schedule runs with longer interval
-cron.schedule('0 */6 * * *', () => {  // Run every 6 hours instead of 4
-  if (dayCount < TOTAL_DAYS) {
-    run();
-  } else {
-    console.log('\n=== 100 Days Challenge Completed! ===');
-    process.exit(0);
+        Requirements:
+        1. Focus on technical depth and professional insights about programming languages (Python, JavaScript, Java, C++, C#, etc.)
+        2. Include specific technical details, best practices, or advanced concepts
+        3. Add relevant technical hashtags:
+           - Language-specific: #Python #JavaScript #Java #Cpp #CSharp
+           - Technical: #SoftwareEngineering #WebDev #BackendDev #FrontendDev
+           - Advanced: #SystemDesign #Architecture #CleanCode #DevOps
+        4. Use professional emojis (💻 🛠️ ⚡ 🔧)
+        5. Keep it under 280 characters
+        6. Make it sound like an expert developer sharing knowledge
+        7. Include a technical tip or best practice if relevant
+
+        Don't include the source or date.`;
+
+      if (randomArticle.urlToImage) {
+        imageBuffer = await downloadImage(randomArticle.urlToImage);
+      }
+      if (!imageBuffer) {
+        const defaultImageUrl = DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
+        imageBuffer = await downloadImage(defaultImageUrl);
+      }
+    }
+
+    const result = await generateAndTweet(prompt, imageBuffer);
+    console.log('Tweet cycle completed:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in tweet cycle:', error);
+    return { 
+      success: false, 
+      error: error.message 
+    };
   }
+}
+
+// Run the bot immediately when started
+runBot().then(result => {
+  console.log('\nBot execution completed');
+  if (!result.success) {
+    console.error('Error:', result.error);
+  }
+}).catch(error => {
+  console.error('Fatal error:', error);
 });
+
+// Export for Vercel
+module.exports = async (req, res) => {
+  const result = await runBot();
+  res.status(result.success ? 200 : 500).json(result);
+};

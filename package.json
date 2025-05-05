@@ -10,10 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "latest",
+    "dotenv": "^16.5.0",
     "groq-sdk": "latest",
-    "twitter-api-v2": "latest",
     "newsapi": "latest",
-    "axios": "latest"
+    "twitter-api-v2": "latest"
   },
   "engines": {
     "node": ">=18.0.0"
