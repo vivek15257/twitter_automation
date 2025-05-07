@@ -123,19 +123,21 @@ async function runBot() {
     const me = await twitterClient.v2.me();
     console.log(`Connected to Twitter as: @${me.data.username}`);
 
-    // Check 24-hour user limits
-    const rateLimits = await twitterClient.v2.rateLimitStatus();
-    const userLimits = rateLimits.data?.resources?.users?.['/2/users/:id'] || {};
-    const dailyLimit = parseInt(rateLimits.headers?.['x-user-limit-24hour-limit']) || 25;
-    const dailyRemaining = parseInt(rateLimits.headers?.['x-user-limit-24hour-remaining']) || 0;
-    const dailyReset = parseInt(rateLimits.headers?.['x-user-limit-24hour-reset']) || 0;
+    // Get user's tweet count for the last 24 hours
+    const tweets = await twitterClient.v2.userTimeline(me.data.id, {
+      max_results: 100,
+      start_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    });
+
+    const tweetCount = tweets.data?.length || 0;
+    const dailyLimit = 25; // Twitter's default daily limit
+    const dailyRemaining = Math.max(0, dailyLimit - tweetCount);
 
     console.log(`Daily tweet limit: ${dailyLimit}`);
     console.log(`Daily tweets remaining: ${dailyRemaining}`);
-    console.log(`Daily limit resets at: ${new Date(dailyReset * 1000).toLocaleString()}`);
 
     if (dailyRemaining === 0) {
-      const resetTime = new Date(dailyReset * 1000);
+      const resetTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
       console.log(`Daily tweet limit reached. Next reset at: ${resetTime}`);
       return {
         success: false,
